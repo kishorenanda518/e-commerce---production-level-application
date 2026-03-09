@@ -1,0 +1,86 @@
+spring:
+  application:
+    name: user-service
+
+  # ── DATABASE — MySQL ──────────────────────────────────────────────
+  datasource:
+    url: jdbc:mysql://localhost:3306/user_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: root
+    password: nanda
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 5
+      pool-name: UserServicePool
+
+  # ── JPA ──────────────────────────────────────────────────────────
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+        format_sql: true
+
+  # ── REDIS ─────────────────────────────────────────────────────────
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password:
+      timeout: 2000ms
+      repositories:
+        enabled: false
+
+  # ── MAIL ──────────────────────────────────────────────────────────
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: nandatech32@gmail.com
+    password: kzda vpew npbm yhwd
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+
+  # ── ASYNC ─────────────────────────────────────────────────────────
+  task:
+    execution:
+      pool:
+        core-size: 2
+        max-size: 5
+
+  # ── FLYWAY ───────────────────────────────────────────────────────
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+# ── SERVER ────────────────────────────────────────────────────────
+server:
+  port: 8081
+
+# ── APP CUSTOM ────────────────────────────────────────────────────
+app:
+  base-url: http://localhost:8081
+
+# ── SWAGGER ───────────────────────────────────────────────────────
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+
+# ── LOGGING ───────────────────────────────────────────────────────
+logging:
+  level:
+    com.ecommerce: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.flywaydb: INFO
+  file:
+    name: logs/logback-spring.xml
+  logback:
+    rollingpolicy:
+      max-file-size: 10MB
+      max-history: 7
+      file-name-pattern: logs/user-service-%d{yyyy-MM-dd}.%i.log

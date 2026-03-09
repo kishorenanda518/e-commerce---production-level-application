@@ -1,0 +1,197 @@
+2026-03-09T00:48:19.369+05:30  INFO 20828 --- [user-service] [main] c.e.user_service.UserServiceApplication  : Starting UserServiceApplication using Java 21.0.2 with PID 20828 (F:\Ecommerce Production Level Application\user-service\target\classes started by nanda royality in F:\Ecommerce Production Level Application\user-service)
+2026-03-09T00:48:19.371+05:30 DEBUG 20828 --- [user-service] [main] c.e.user_service.UserServiceApplication  : Running with Spring Boot v3.2.3, Spring v6.1.4
+2026-03-09T00:48:19.372+05:30  INFO 20828 --- [user-service] [main] c.e.user_service.UserServiceApplication  : No active profile set, falling back to 1 default profile: "default"
+2026-03-09T00:48:22.649+05:30  INFO 20828 --- [user-service] [main] .s.d.r.c.RepositoryConfigurationDelegate : Multiple Spring Data modules found, entering strict repository configuration mode
+2026-03-09T00:48:22.651+05:30  INFO 20828 --- [user-service] [main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-03-09T00:48:22.779+05:30  INFO 20828 --- [user-service] [main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 120 ms. Found 5 JPA repository interfaces.
+2026-03-09T00:48:22.780+05:30  INFO 20828 --- [user-service] [main] .s.d.r.c.RepositoryConfigurationDelegate : Multiple Spring Data modules found, entering strict repository configuration mode
+2026-03-09T00:48:22.781+05:30  INFO 20828 --- [user-service] [main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data Redis repositories in DEFAULT mode.
+2026-03-09T00:48:22.788+05:30  INFO 20828 --- [user-service] [main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 0 ms. Found 0 Redis repository interfaces.
+2026-03-09T00:48:24.168+05:30  INFO 20828 --- [user-service] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8081 (http)
+2026-03-09T00:48:24.181+05:30  INFO 20828 --- [user-service] [main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-03-09T00:48:24.181+05:30  INFO 20828 --- [user-service] [main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.19]
+2026-03-09T00:48:24.273+05:30  INFO 20828 --- [user-service] [main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-03-09T00:48:24.273+05:30  INFO 20828 --- [user-service] [main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 4839 ms
+2026-03-09T00:48:24.598+05:30  INFO 20828 --- [user-service] [main] com.zaxxer.hikari.HikariDataSource       : UserServicePool - Starting...
+2026-03-09T00:48:25.401+05:30  INFO 20828 --- [user-service] [main] com.zaxxer.hikari.pool.HikariPool        : UserServicePool - Added connection com.mysql.cj.jdbc.ConnectionImpl@4b8a0d03
+2026-03-09T00:48:25.403+05:30  INFO 20828 --- [user-service] [main] com.zaxxer.hikari.HikariDataSource       : UserServicePool - Start completed.
+2026-03-09T00:48:25.569+05:30  INFO 20828 --- [user-service] [main] o.f.c.internal.license.VersionPrinter    : Flyway Community Edition 9.22.3 by Redgate
+2026-03-09T00:48:25.570+05:30  INFO 20828 --- [user-service] [main] o.f.c.internal.license.VersionPrinter    : See release notes here: https://rd.gt/416ObMi
+2026-03-09T00:48:25.570+05:30  INFO 20828 --- [user-service] [main] o.f.c.internal.license.VersionPrinter    : 
+2026-03-09T00:48:26.243+05:30  INFO 20828 --- [user-service] [main] org.flywaydb.core.FlywayExecutor         : Database: jdbc:mysql://localhost:3306/user_db (MySQL 8.0)
+2026-03-09T00:48:26.623+05:30  INFO 20828 --- [user-service] [main] o.f.core.internal.command.DbValidate     : Successfully validated 0 migrations (execution time 00:00.169s)
+2026-03-09T00:48:26.624+05:30  WARN 20828 --- [user-service] [main] o.f.core.internal.command.DbValidate     : No migrations found. Are your locations set up correctly?
+2026-03-09T00:48:26.637+05:30  INFO 20828 --- [user-service] [main] o.f.core.internal.command.DbMigrate      : Current version of schema `user_db`: << Empty Schema >>
+2026-03-09T00:48:26.641+05:30  INFO 20828 --- [user-service] [main] o.f.core.internal.command.DbMigrate      : Schema `user_db` is up to date. No migration necessary.
+2026-03-09T00:48:26.741+05:30  INFO 20828 --- [user-service] [main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-03-09T00:48:26.833+05:30  INFO 20828 --- [user-service] [main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.4.4.Final
+2026-03-09T00:48:26.889+05:30  INFO 20828 --- [user-service] [main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-03-09T00:48:27.113+05:30  INFO 20828 --- [user-service] [main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-03-09T00:48:27.436+05:30  WARN 20828 --- [user-service] [main] org.hibernate.orm.deprecation            : HHH90000025: MySQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-03-09T00:48:28.387+05:30  INFO 20828 --- [user-service] [main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-03-09T00:48:30.521+05:30  INFO 20828 --- [user-service] [main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-03-09T00:48:30.882+05:30  INFO 20828 --- [user-service] [main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-03-09T00:48:33.070+05:30  INFO 20828 --- [user-service] [main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint(s) beneath base path '/actuator'
+2026-03-09T00:48:33.156+05:30  INFO 20828 --- [user-service] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8081 (http) with context path ''
+2026-03-09T00:48:33.171+05:30  INFO 20828 --- [user-service] [main] c.e.user_service.UserServiceApplication  : Started UserServiceApplication in 14.351 seconds (process running for 16.058)
+2026-03-09T00:51:38.249+05:30  INFO 20828 --- [user-service] [http-nio-8081-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-03-09T00:51:38.250+05:30  INFO 20828 --- [user-service] [http-nio-8081-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-03-09T00:51:38.251+05:30  INFO 20828 --- [user-service] [http-nio-8081-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 1 ms
+2026-03-09T00:51:38.409+05:30  INFO 20828 --- [user-service] [http-nio-8081-exec-1] c.e.u.controller.AuthController          : Registration request received for email: logtest@example.com
+2026-03-09T00:51:38.419+05:30  INFO 20828 --- [user-service] [http-nio-8081-exec-1] c.e.u.service.UserServiceImpl            : Registering new user with email: logtest@example.com
+2026-03-09T00:51:46.138+05:30 DEBUG 20828 --- [user-service] [http-nio-8081-exec-1] org.hibernate.SQL                        : 
+    select
+        u1_0.id 
+    from
+        users u1_0 
+    where
+        u1_0.email=? 
+    limit
+        ?
+2026-03-09T00:51:46.340+05:30 DEBUG 20828 --- [user-service] [http-nio-8081-exec-1] org.hibernate.SQL                        : 
+    select
+        u1_0.id 
+    from
+        users u1_0 
+    where
+        u1_0.username=? 
+    limit
+        ?
+2026-03-09T00:51:53.087+05:30 DEBUG 20828 --- [user-service] [http-nio-8081-exec-1] org.hibernate.SQL                        : 
+    select
+        r1_0.id,
+        r1_0.description,
+        r1_0.name 
+    from
+        roles r1_0 
+    where
+        r1_0.name=?
+2026-03-09T00:51:53.123+05:30  INFO 20828 --- [user-service] [http-nio-8081-exec-1] c.e.u.service.UserServiceImpl            : User registered successfully with id: 27634d6f-196c-4230-a0d4-1246efe514c6
+2026-03-09T00:51:53.140+05:30 DEBUG 20828 --- [user-service] [http-nio-8081-exec-1] org.hibernate.SQL                        : 
+    insert 
+    into
+        users
+        (created_at, email, email_verified, last_login_at, password_hash, phone, status, updated_at, username, version, id) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-03-09T00:51:53.209+05:30 DEBUG 20828 --- [user-service] [http-nio-8081-exec-1] org.hibernate.SQL                        : 
+    insert 
+    into
+        user_profiles
+        (bio, created_at, date_of_birth, first_name, gender, last_name, profile_picture_url, updated_at, user_id, id) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-03-09T00:51:53.396+05:30 DEBUG 20828 --- [user-service] [http-nio-8081-exec-1] org.hibernate.SQL                        : 
+    insert 
+    into
+        user_roles
+        (user_id, role_id) 
+    values
+        (?, ?)
+2026-03-09T01:22:46.542+05:30  WARN 20828 --- [user-service] [UserServicePool housekeeper] com.zaxxer.hikari.pool.HikariPool        : UserServicePool - Thread starvation or clock leap detected (housekeeper delta=13m4s501ms302µs600ns).
+2026-03-09 23:00:24.159 [background-preinit] INFO  o.h.validator.internal.util.Version - HV000001: Hibernate Validator 8.0.1.Final
+2026-03-09 23:00:24.208 [main] INFO  c.e.u.UserServiceApplication - Starting UserServiceApplication using Java 21.0.2 with PID 17404 (F:\Ecommerce Production Level Application\user-service\target\classes started by nanda royality in F:\Ecommerce Production Level Application\user-service)
+2026-03-09 23:00:24.209 [main] DEBUG c.e.u.UserServiceApplication - Running with Spring Boot v3.2.3, Spring v6.1.4
+2026-03-09 23:00:24.209 [main] INFO  c.e.u.UserServiceApplication - No active profile set, falling back to 1 default profile: "default"
+2026-03-09 23:00:26.581 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Multiple Spring Data modules found, entering strict repository configuration mode
+2026-03-09 23:00:26.581 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-03-09 23:00:26.740 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 152 ms. Found 5 JPA repository interfaces.
+2026-03-09 23:00:26.742 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Multiple Spring Data modules found, entering strict repository configuration mode
+2026-03-09 23:00:26.742 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data Redis repositories in DEFAULT mode.
+2026-03-09 23:00:26.753 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 0 ms. Found 0 Redis repository interfaces.
+2026-03-09 23:00:28.598 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat initialized with port 8081 (http)
+2026-03-09 23:00:28.617 [main] INFO  o.a.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-8081"]
+2026-03-09 23:00:28.624 [main] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2026-03-09 23:00:28.625 [main] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.19]
+2026-03-09 23:00:28.752 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-03-09 23:00:28.752 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 4482 ms
+2026-03-09 23:00:29.161 [main] INFO  com.zaxxer.hikari.HikariDataSource - UserServicePool - Starting...
+2026-03-09 23:00:32.954 [main] INFO  com.zaxxer.hikari.pool.HikariPool - UserServicePool - Added connection com.mysql.cj.jdbc.ConnectionImpl@22002459
+2026-03-09 23:00:32.957 [main] INFO  com.zaxxer.hikari.HikariDataSource - UserServicePool - Start completed.
+2026-03-09 23:00:33.057 [main] INFO  o.f.c.i.license.VersionPrinter - Flyway Community Edition 9.22.3 by Redgate
+2026-03-09 23:00:33.057 [main] INFO  o.f.c.i.license.VersionPrinter - See release notes here: https://rd.gt/416ObMi
+2026-03-09 23:00:33.058 [main] INFO  o.f.c.i.license.VersionPrinter - 
+2026-03-09 23:00:33.662 [main] INFO  org.flywaydb.core.FlywayExecutor - Database: jdbc:mysql://localhost:3306/user_db (MySQL 8.0)
+2026-03-09 23:00:33.872 [main] INFO  o.f.core.internal.command.DbValidate - Successfully validated 0 migrations (execution time 00:00.118s)
+2026-03-09 23:00:33.873 [main] WARN  o.f.core.internal.command.DbValidate - No migrations found. Are your locations set up correctly?
+2026-03-09 23:00:33.886 [main] INFO  o.f.core.internal.command.DbMigrate - Current version of schema `user_db`: << Empty Schema >>
+2026-03-09 23:00:33.891 [main] INFO  o.f.core.internal.command.DbMigrate - Schema `user_db` is up to date. No migration necessary.
+2026-03-09 23:00:33.986 [main] INFO  o.h.jpa.internal.util.LogHelper - HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-03-09 23:00:34.059 [main] INFO  org.hibernate.Version - HHH000412: Hibernate ORM core version 6.4.4.Final
+2026-03-09 23:00:34.102 [main] INFO  o.h.c.i.RegionFactoryInitiator - HHH000026: Second-level cache disabled
+2026-03-09 23:00:34.429 [main] INFO  o.s.o.j.p.SpringPersistenceUnitInfo - No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-03-09 23:00:34.548 [main] WARN  org.hibernate.orm.deprecation - HHH90000025: MySQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-03-09 23:00:35.703 [main] INFO  o.h.e.t.j.p.i.JtaPlatformInitiator - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-03-09 23:00:35.820 [main] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-03-09 23:00:36.289 [main] INFO  o.s.d.j.r.query.QueryEnhancerFactory - Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-03-09 23:00:39.224 [main] INFO  o.s.b.a.e.web.EndpointLinksResolver - Exposing 1 endpoint(s) beneath base path '/actuator'
+2026-03-09 23:00:39.345 [main] INFO  o.a.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-8081"]
+2026-03-09 23:00:39.374 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat started on port 8081 (http) with context path ''
+2026-03-09 23:00:39.395 [main] INFO  c.e.u.UserServiceApplication - Started UserServiceApplication in 16.134 seconds (process running for 21.421)
+2026-03-09 23:15:30.575 [http-nio-8081-exec-1] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-03-09 23:15:30.801 [http-nio-8081-exec-1] INFO  o.s.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-03-09 23:15:31.654 [http-nio-8081-exec-1] INFO  o.s.web.servlet.DispatcherServlet - Completed initialization in 852 ms
+2026-03-09 23:15:34.759 [http-nio-8081-exec-2] INFO  o.s.api.AbstractOpenApiResource - Init duration for springdoc-openapi is: 1707 ms
+2026-03-09 23:18:03.736 [http-nio-8081-exec-6] INFO  c.e.u.controller.AuthController - Registration request received for email: nandakishore@yopmail.com
+2026-03-09 23:18:04.373 [http-nio-8081-exec-6] INFO  c.e.u.service.UserServiceImpl - Registering new user with email: nandakishore@yopmail.com
+2026-03-09 23:18:20.658 [http-nio-8081-exec-6] DEBUG org.hibernate.SQL - 
+    select
+        u1_0.id 
+    from
+        users u1_0 
+    where
+        u1_0.email=? 
+    limit
+        ?
+2026-03-09 23:18:21.512 [http-nio-8081-exec-6] DEBUG org.hibernate.SQL - 
+    select
+        u1_0.id 
+    from
+        users u1_0 
+    where
+        u1_0.username=? 
+    limit
+        ?
+2026-03-09 23:18:22.710 [http-nio-8081-exec-6] DEBUG org.hibernate.SQL - 
+    select
+        r1_0.id,
+        r1_0.description,
+        r1_0.name 
+    from
+        roles r1_0 
+    where
+        r1_0.name=?
+2026-03-09 23:18:23.673 [http-nio-8081-exec-6] INFO  c.e.u.service.UserServiceImpl - User registered successfully with id: 6d89161e-4a96-4140-871a-a4ab7c827062
+2026-03-09 23:18:23.724 [http-nio-8081-exec-6] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        users
+        (created_at, email, email_verified, last_login_at, password_hash, phone, status, updated_at, username, version, id) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-03-09 23:18:24.221 [http-nio-8081-exec-6] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        user_profiles
+        (bio, created_at, date_of_birth, first_name, gender, last_name, profile_picture_url, updated_at, user_id, id) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-03-09 23:18:24.553 [http-nio-8081-exec-6] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        user_roles
+        (user_id, role_id) 
+    values
+        (?, ?)
+2026-03-09 23:19:28.129 [http-nio-8081-exec-10] INFO  c.e.u.controller.AuthController - Registration request received for email: nandakishore@yopmail.com
+2026-03-09 23:19:28.131 [http-nio-8081-exec-10] INFO  c.e.u.service.UserServiceImpl - Registering new user with email: nandakishore@yopmail.com
+2026-03-09 23:19:28.133 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        u1_0.id 
+    from
+        users u1_0 
+    where
+        u1_0.email=? 
+    limit
+        ?
+2026-03-09 23:19:28.167 [http-nio-8081-exec-10] WARN  c.e.u.e.GlobalExceptionHandler - Conflict - user already exists: Email 'nandakishore@yopmail.com' is already registered
