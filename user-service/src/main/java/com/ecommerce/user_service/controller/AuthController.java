@@ -2,13 +2,18 @@ package com.ecommerce.user_service.controller;
 
 import com.ecommerce.user_service.controller.AuthApi;
 import com.ecommerce.user_service.model.request.CreateUserRequest;
+import com.ecommerce.user_service.model.request.LoginRequest;
 import com.ecommerce.user_service.model.request.ResendVerificationRequest;
 import com.ecommerce.user_service.model.response.ApiResponse;
+import com.ecommerce.user_service.model.response.AuthResponse;
 import com.ecommerce.user_service.model.response.UserResponse;
 import com.ecommerce.user_service.service.UserService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
@@ -64,6 +69,53 @@ public class AuthController implements AuthApi {
                         "Verification email resent successfully. Please check your inbox.",
                         null
                 )
+        );
+    }
+
+    // ── 4. LOGIN ──────────────────────────────────────────────────────
+    @Override
+    public ResponseEntity<ApiResponse<AuthResponse>> login(
+            @Valid LoginRequest request,
+            HttpServletResponse response) {
+
+        log.info("Login request for: {}", request.getUsernameOrEmail());
+
+        AuthResponse authResponse = userService.login(request, response);
+
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "Login successful. Welcome back " + authResponse.getFirstName() + "!",
+                        authResponse
+                )
+        );
+    }
+
+    // ── 5. LOGOUT ─────────────────────────────────────────────────────
+    @Override
+    public ResponseEntity<ApiResponse<Void>> logout(
+            HttpServletRequest request,
+            HttpServletResponse response) {
+
+        log.info("Logout request received");
+
+        userService.logout(request, response);
+
+        return ResponseEntity.ok(
+                ApiResponse.success("Logged out successfully.", null)
+        );
+    }
+
+    @Override
+    public ResponseEntity<ApiResponse<Page<UserResponse>>> getAllUsers(
+            int page, int size, String sortBy, String direction) {
+
+        log.info("Fetching all users — page: {}, size: {}, sortBy: {}, direction: {}",
+                page, size, sortBy, direction);
+
+        Page<UserResponse> users = userService.getAllUsers(page, size, sortBy, direction);
+
+        return ResponseEntity.ok(
+                ApiResponse.success("Users fetched successfully", users)
         );
     }
 }

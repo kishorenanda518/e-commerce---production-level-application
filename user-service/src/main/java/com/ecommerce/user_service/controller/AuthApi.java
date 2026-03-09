@@ -1,8 +1,10 @@
 package com.ecommerce.user_service.controller;
 
 import com.ecommerce.user_service.model.request.CreateUserRequest;
+import com.ecommerce.user_service.model.request.LoginRequest;
 import com.ecommerce.user_service.model.request.ResendVerificationRequest;
 import com.ecommerce.user_service.model.response.ApiResponse;
+import com.ecommerce.user_service.model.response.AuthResponse;
 import com.ecommerce.user_service.model.response.UserResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -11,7 +13,10 @@ import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -168,5 +173,95 @@ public interface AuthApi {
     })
     ResponseEntity<ApiResponse<Void>> resendVerification(
             @Valid @RequestBody ResendVerificationRequest request
+    );
+
+    // ── 4. LOGIN ──────────────────────────────────────────────────────
+    @PostMapping("/login")
+    @Operation(summary = "Login with username or email",
+            description = """
+                   Authenticates user and sets JWT in HttpOnly cookies.
+                   - access_token cookie → 15 min TTL
+                   - refresh_token cookie → 7 days TTL (stored in Redis)
+                   - Tokens are NOT returned in response body (XSS safe)
+               """)
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200", description = "Login successful",
+                    content = @Content(mediaType = "application/json",
+                            examples = @ExampleObject(value = """
+                    {
+                      "status": "SUCCESS",
+                      "message": "Login successful. Welcome back John!",
+                      "data": {
+                        "id": "550e8400-e29b-41d4-a716-446655440000",
+                        "username": "john_doe",
+                        "email": "john@example.com",
+                        "firstName": "John",
+                        "lastName": "Doe",
+                        "roles": ["ROLE_USER"],
+                        "tokenType": "Bearer",
+                        "expiresIn": 900
+                      }
+                    }
+                """))
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401", description = "Invalid credentials",
+                    content = @Content(mediaType = "application/json",
+                            examples = @ExampleObject(value = """
+                    {
+                      "status": 401,
+                      "error": "INVALID_CREDENTIALS",
+                      "message": "Invalid username/email or password"
+                    }
+                """))
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "403", description = "Account suspended or email not verified",
+                    content = @Content(mediaType = "application/json",
+                            examples = @ExampleObject(value = """
+                    {
+                      "status": 403,
+                      "error": "EMAIL_NOT_VERIFIED",
+                      "message": "Please verify your email before logging in."
+                    }
+                """))
+            )
+    })
+    ResponseEntity<ApiResponse<AuthResponse>> login(
+            @Valid @RequestBody LoginRequest request,
+            HttpServletResponse response
+    );
+
+    // ── 5. LOGOUT ─────────────────────────────────────────────────────
+    @PostMapping("/logout")
+    @Operation(summary = "Logout current user",
+            description = """
+                   Clears JWT cookies and blacklists the access token in Redis.
+                   Refresh token is deleted from Redis.
+               """)
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200", description = "Logged out successfully",
+                    content = @Content(mediaType = "application/json",
+                            examples = @ExampleObject(value = """
+                    {
+                      "status": "SUCCESS",
+                      "message": "Logged out successfully."
+                    }
+                """))
+            )
+    })
+    ResponseEntity<ApiResponse<Void>> logout(
+            HttpServletRequest request,
+            HttpServletResponse response
+    );
+    @GetMapping("/users")
+    @Operation(summary = "Get all users")
+    ResponseEntity<ApiResponse<Page<UserResponse>>> getAllUsers(
+                                                                   @RequestParam(defaultValue = "0") int page,
+                                                                   @RequestParam(defaultValue = "10") int size,
+                                                                   @RequestParam(defaultValue = "createdAt") String sortBy,
+                                                                   @RequestParam(defaultValue = "desc") String direction
     );
 }

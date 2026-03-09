@@ -1,0 +1,165 @@
+Login & Logout Security Flow
+Login Flow
+Client sends POST /api/v1/auth/login
+{ usernameOrEmail: "john_doe", password: "Test@1234" }
+         │
+         ▼
+AuthController.login()
+         │
+         ▼
+UserServiceImpl.login()
+         │
+         ├─ Step 1: Find user by username OR email in MySQL
+         │          SELECT * FROM users WHERE username=? OR email=?
+         │
+         ├─ Step 2: Check status = SUSPENDED?
+         │          YES → throw AccountSuspendedException (403)
+         │
+         ├─ Step 3: Check emailVerified = false?
+         │          YES → throw EmailNotVerifiedException (403)
+         │
+         ├─ Step 4: BCrypt.matches(rawPassword, hashedPassword)
+         │          NO MATCH → throw InvalidCredentialsException (401)
+         │
+         ├─ Step 5: Generate Access Token (JWT)
+         │          jwtUtil.generateAccessToken(userId, username, roles)
+         │          Algorithm  → HS256
+         │          Claims     → userId, username, roles, type=ACCESS, jti
+         │          TTL        → 15 minutes
+         │          Signed with → secret key from application.yml
+         │
+         ├─ Step 6: Generate Refresh Token (JWT)
+         │          jwtUtil.generateRefreshToken(userId)
+         │          Claims     → userId, type=REFRESH, jti
+         │          TTL        → 7 days
+         │          Stored in  → Redis key: refresh::token::{userId}
+         │
+         ├─ Step 7: Set HttpOnly Cookies
+         │          Set-Cookie: access_token=<jwt>; HttpOnly; Path=/; SameSite=Strict
+         │          Set-Cookie: refresh_token=<jwt>; HttpOnly; Path=/; SameSite=Strict
+         │          JS cannot read these → XSS safe
+         │
+         ├─ Step 8: Update lastLoginAt = Instant.now() in MySQL
+         │
+         └─ Step 9: Return AuthResponse (NO tokens in body)
+                    { id, username, email, firstName, roles, tokenType, expiresIn }
+
+Every Subsequent Request Flow
+Client sends GET /api/v1/users
+Browser automatically sends cookies (HttpOnly)
+Cookie: access_token=eyJhbGci...
+         │
+         ▼
+JwtAuthenticationFilter.doFilterInternal()
+         │
+         ├─ Step 1: Extract access_token from cookie
+         │          request.getCookies() → find "access_token"
+         │
+         ├─ Step 2: Validate token
+         │          jwtUtil.validateToken(token)
+         │          ├─ Check signature  → tampered? REJECT
+         │          ├─ Check expiry     → expired? REJECT
+         │          └─ Valid? → continue
+         │
+         ├─ Step 3: Extract claims
+         │          userId  = claims.getSubject()
+         │          roles   = claims.get("roles")
+         │
+         ├─ Step 4: Set SecurityContext
+         │          SecurityContextHolder.setAuthentication(
+         │              new UsernamePasswordAuthenticationToken(userId, null, authorities)
+         │          )
+         │
+         └─ Step 5: Pass to Controller
+                    Controller can now call SecurityContextHolder.getAuthentication()
+                    to get the current logged-in userId
+         │
+         ▼
+SecurityConfig checks route
+         ├─ Public route?     → allow
+         ├─ Authenticated?    → check SecurityContext → allow/deny
+         └─ ROLE_ADMIN route? → check roles → allow/deny
+
+Logout Flow
+Client sends POST /api/v1/auth/logout
+Browser sends cookies automatically
+         │
+         ▼
+UserServiceImpl.logout()
+         │
+         ├─ Step 1: Extract access_token from cookie
+         │
+         ├─ Step 2: Blacklist token in Redis
+         │          Key   → token::blacklist::{jti}
+         │          Value → userId
+         │          TTL   → remaining lifetime of token
+         │          WHY?  → token still valid for 15 min after logout
+         │                  blacklist prevents reuse even if stolen
+         │
+         ├─ Step 3: Delete refresh token from Redis
+         │          DEL refresh::token::{userId}
+         │          → user cannot get new access tokens anymore
+         │
+         └─ Step 4: Clear cookies
+                    Set-Cookie: access_token=; MaxAge=0
+                    Set-Cookie: refresh_token=; MaxAge=0
+                    Browser deletes both cookies immediately
+
+Redis Keys Summary
+After Login:
+─────────────────────────────────────────────────
+refresh::token::{userId}        → refresh JWT      TTL: 7 days
+─────────────────────────────────────────────────
+
+After Logout:
+─────────────────────────────────────────────────
+token::blacklist::{jti}         → userId           TTL: remaining access token life
+refresh::token::{userId}        → DELETED
+─────────────────────────────────────────────────
+
+OTP keys (from registration):
+─────────────────────────────────────────────────
+email::otp::{email}             → 6-digit OTP      TTL: 10 min
+email::resend::count::{email}   → resend count      TTL: 1 hour
+─────────────────────────────────────────────────
+
+Why HttpOnly Cookie vs localStorage
+                    HttpOnly Cookie    localStorage
+─────────────────────────────────────────────────────
+XSS Attack          ✅ Safe            ❌ Vulnerable
+                    JS cannot read     JS can steal token
+
+CSRF Attack         ✅ Safe            ✅ Safe
+                    SameSite=Strict    Not sent auto
+
+Auto sent by        ✅ Yes             ❌ No
+browser             browser handles    must add header
+
+Mobile apps         ⚠️ Extra setup     ✅ Easy
+                    need cookie jar    just store it
+─────────────────────────────────────────────────────
+
+Token Lifecycle
+User Registers
+      │
+      ▼
+Email OTP sent (Redis TTL 10 min)
+      │
+      ▼
+User Verifies Email
+      │
+      ▼
+User Logs In ──────────────────────────────────┐
+      │                                         │
+      ▼                                         │
+Access Token (Cookie, 15 min) ──── expires ──► │
+      │                                         │
+      ▼                              Use Refresh Token
+Refresh Token (Redis, 7 days) ──── to get new Access Token
+      │
+      ▼
+User Logs Out
+      │
+      ├─ Access Token  → blacklisted in Redis
+      ├─ Refresh Token → deleted from Redis
+      └─ Cookies       → cleared from browser

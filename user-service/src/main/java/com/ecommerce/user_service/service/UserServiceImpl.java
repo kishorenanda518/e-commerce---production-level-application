@@ -1,26 +1,42 @@
 package com.ecommerce.user_service.service;
 
 
+import com.ecommerce.user_service.config.JwtProperties;
 import com.ecommerce.user_service.entity.Role;
 import com.ecommerce.user_service.entity.User;
 import com.ecommerce.user_service.entity.UserProfile;
 import com.ecommerce.user_service.enums.UserStatus;
-import com.ecommerce.user_service.exception.OtpException;
-import com.ecommerce.user_service.exception.ResendLimitExceededException;
-import com.ecommerce.user_service.exception.ResourceNotFoundException;
-import com.ecommerce.user_service.exception.UserAlreadyExistsException;
+import com.ecommerce.user_service.exception.*;
 import com.ecommerce.user_service.mapper.UserMapper;
 import com.ecommerce.user_service.model.request.CreateUserRequest;
+import com.ecommerce.user_service.model.request.LoginRequest;
+import com.ecommerce.user_service.model.response.AuthResponse;
 import com.ecommerce.user_service.model.response.UserResponse;
 import com.ecommerce.user_service.repository.RoleRepository;
 import com.ecommerce.user_service.repository.UserRepository;
+import com.ecommerce.user_service.security.CookieUtil;
+import com.ecommerce.user_service.security.JwtUtil;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -33,8 +49,42 @@ public class UserServiceImpl implements UserService {
     private final BCryptPasswordEncoder passwordEncoder;
     private final OtpService otpService;
     private final EmailService emailService;
+    private final JwtUtil jwtUtil;
+    private final CookieUtil cookieUtil;
+    private final JwtProperties jwtProperties;
+    private final RedisTemplate<String, String> redisTemplate;
 
     private static final int MAX_RESEND_PER_HOUR = 3;
+    private static final String REFRESH_TOKEN_PREFIX   = "refresh::token::";
+    private static final String TOKEN_BLACKLIST_PREFIX = "token::blacklist::";
+
+
+    @Override
+    @Transactional(readOnly = true)
+    public UserDetails loadUserByUsername(String usernameOrEmail) throws UsernameNotFoundException {
+
+        log.debug("Loading user by username or email: {}", usernameOrEmail);
+
+        User user = userRepository.findByUsernameOrEmail(usernameOrEmail, usernameOrEmail)
+                .orElseThrow(() -> new UsernameNotFoundException(
+                        "User not found with username or email: " + usernameOrEmail
+                ));
+
+        List<SimpleGrantedAuthority> authorities = user.getRoles()
+                .stream()
+                .map(role -> new SimpleGrantedAuthority(role.getName()))
+                .toList();
+
+        return org.springframework.security.core.userdetails.User
+                .withUsername(user.getId())
+                .password(user.getPasswordHash())
+                .authorities(authorities)
+                .accountExpired(false)
+                .accountLocked(false)
+                .credentialsExpired(false)
+                .disabled(false)
+                .build();
+    }
 
     @Override
     @Transactional   // whole registration is one atomic DB transaction
@@ -161,5 +211,156 @@ public class UserServiceImpl implements UserService {
         );
 
         log.info("Verification email resent to: {} | Attempt: {}", email, currentCount + 1);
+    }
+
+
+    // ════════════════════════════════════════════════════════════════
+    // LOGIN
+    // ════════════════════════════════════════════════════════════════
+    @Override
+    @Transactional
+    public AuthResponse login(LoginRequest request, HttpServletResponse response) {
+
+        log.info("Login attempt for: {}", request.getUsernameOrEmail());
+
+        // Step 1: Load user by username or email
+        User user = userRepository
+                .findByUsernameOrEmail(request.getUsernameOrEmail(), request.getUsernameOrEmail())
+                .orElseThrow(() -> new InvalidCredentialsException(
+                        "Invalid username/email or password"
+                ));
+
+        // Step 2: Check account suspended
+        if (user.getStatus() == UserStatus.SUSPENDED) {
+            throw new AccountSuspendedException(
+                    "Your account has been suspended. Please contact support."
+            );
+        }
+
+        // Step 3: Check email verified
+        if (!Boolean.TRUE.equals(user.getEmailVerified())) {
+            throw new EmailNotVerifiedException(
+                    "Please verify your email before logging in. Check your inbox for the OTP."
+            );
+        }
+
+        // Step 4: Verify password
+        if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
+            throw new InvalidCredentialsException("Invalid username/email or password");
+        }
+
+        // Step 5: Get roles as list
+        List<String> roles = user.getRoles()
+                .stream()
+                .map(Role::getName)
+                .collect(Collectors.toList());
+
+        // Step 6: Generate access token (15 min)
+        String accessToken = jwtUtil.generateAccessToken(
+                user.getId(),
+                user.getUsername(),
+                roles
+        );
+
+        // Step 7: Generate refresh token (7 days) → store in Redis
+        String refreshToken = jwtUtil.generateRefreshToken(user.getId());
+        storeRefreshTokenInRedis(user.getId(), refreshToken);
+
+        // Step 8: Set both tokens as HttpOnly cookies
+        cookieUtil.setAccessTokenCookie(response, accessToken);
+        cookieUtil.setRefreshTokenCookie(response, refreshToken);
+
+        // Step 9: Update lastLoginAt
+        user.setLastLoginAt(Instant.now());
+        userRepository.save(user);
+
+        log.info("Login successful for user: {} | id: {}", user.getUsername(), user.getId());
+
+        // Step 10: Return AuthResponse (tokens are in cookies — not in body)
+        return AuthResponse.builder()
+                .id(user.getId())
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .firstName(user.getProfile().getFirstName())
+                .lastName(user.getProfile().getLastName())
+                .roles(roles.stream().collect(Collectors.toSet()))
+                .tokenType("Bearer")
+                .expiresIn(jwtProperties.getJwt().getAccessTokenExpiryMs() / 1000)
+                .build();
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // LOGOUT
+    // ════════════════════════════════════════════════════════════════
+    @Override
+    public void logout(HttpServletRequest request, HttpServletResponse response) {
+
+        log.info("Logout request received");
+
+        // Step 1: Get access token from cookie
+        String accessToken = cookieUtil
+                .getCookieValue(request, jwtProperties.getCookie().getAccessTokenName())
+                .orElse(null);
+
+        if (accessToken != null && jwtUtil.validateToken(accessToken)) {
+
+            String userId    = jwtUtil.extractUserId(accessToken);
+            String tokenId   = jwtUtil.extractTokenId(accessToken);
+            long   expiryMs  = jwtUtil.extractExpiration(accessToken).getTime() - System.currentTimeMillis();
+
+            // Step 2: Blacklist access token in Redis until it expires
+            if (expiryMs > 0) {
+                redisTemplate.opsForValue().set(
+                        TOKEN_BLACKLIST_PREFIX + tokenId,
+                        userId,
+                        expiryMs,
+                        TimeUnit.MILLISECONDS
+                );
+            }
+
+            // Step 3: Delete refresh token from Redis
+            deleteRefreshTokenFromRedis(userId);
+
+            log.info("User logged out: {} | token blacklisted", userId);
+        }
+
+        // Step 4: Clear both cookies
+        cookieUtil.clearAccessTokenCookie(response);
+        cookieUtil.clearRefreshTokenCookie(response);
+
+        log.info("Cookies cleared successfully");
+    }
+
+    @Override
+    public Page<UserResponse> getAllUsers(int page, int size, String sortBy, String direction) {
+
+        Sort sort = direction.equalsIgnoreCase("asc")
+                ? Sort.by(sortBy).ascending()
+                : Sort.by(sortBy).descending();
+
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        return userRepository.findAll(pageable)
+                .map(userMapper::toUserResponse);
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // PRIVATE HELPERS
+    // ════════════════════════════════════════════════════════════════
+
+    private void storeRefreshTokenInRedis(String userId, String refreshToken) {
+        long ttlMs = jwtProperties.getJwt().getRefreshTokenExpiryMs();
+        redisTemplate.opsForValue().set(
+                REFRESH_TOKEN_PREFIX + userId,
+                refreshToken,
+                ttlMs,
+                TimeUnit.MILLISECONDS
+        );
+        log.debug("Refresh token stored in Redis for userId: {}", userId);
+    }
+
+    private void deleteRefreshTokenFromRedis(String userId) {
+        redisTemplate.delete(REFRESH_TOKEN_PREFIX + userId);
+        log.debug("Refresh token deleted from Redis for userId: {}", userId);
     }
 }

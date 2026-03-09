@@ -2,6 +2,7 @@ spring:
   application:
     name: user-service
 
+
   # ── DATABASE — MySQL ──────────────────────────────────────────────
   datasource:
     url: jdbc:mysql://localhost:3306/user_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
@@ -63,6 +64,16 @@ server:
 # ── APP CUSTOM ────────────────────────────────────────────────────
 app:
   base-url: http://localhost:8081
+  jwt:
+    secret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+    access-token-expiry-ms: 900000
+    refresh-token-expiry-ms: 604800000
+  cookie:
+    access-token-name: access_token
+    refresh-token-name: refresh_token
+    secure: false
+    same-site: Strict
+    path: /
 
 # ── SWAGGER ───────────────────────────────────────────────────────
 springdoc:
@@ -78,7 +89,7 @@ logging:
     org.hibernate.SQL: DEBUG
     org.flywaydb: INFO
   file:
-    name: logs/logback-spring.xml
+    name: logs/user-service.log
   logback:
     rollingpolicy:
       max-file-size: 10MB
