@@ -39,7 +39,7 @@ spring:
     host: smtp.gmail.com
     port: 587
     username: nandatech32@gmail.com
-    password: kzda vpew npbm yhwd
+    password: // your security toke
     properties:
       mail.smtp.auth: true
       mail.smtp.starttls.enable: true
