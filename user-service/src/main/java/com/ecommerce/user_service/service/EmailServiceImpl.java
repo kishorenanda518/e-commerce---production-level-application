@@ -68,7 +68,7 @@ public class EmailServiceImpl implements EmailService {
     }
 
     // ── Email HTML Body ──────────────────────────────────────────────
-    private String buildVerificationEmailBody(String firstName, String otp, String email) {
+    public String buildVerificationEmailBody(String firstName, String otp, String email) {
         String verifyUrl = baseUrl + "/api/v1/auth/verify-email?token=" + otp + "&email=" + email;
 
         return """
@@ -96,5 +96,51 @@ public class EmailServiceImpl implements EmailService {
             </body>
             </html>
         """.formatted(firstName, otp, verifyUrl);
+    }
+    // ── Password Reset Email HTML Body ───────────────────────────────
+    private String buildPasswordResetEmailBody(String firstName, String otp) {
+        return """
+            <html>
+            <body style="font-family: Arial, sans-serif; max-width: 600px; margin: auto;">
+                <h2 style="color: #1E3A5F;">Reset Your Password</h2>
+                <p>Hi <strong>%s</strong>,</p>
+                <p>We received a request to reset your password. Use the OTP below to reset it.</p>
+
+                <div style="background:#f4f4f4; padding:20px; text-align:center; border-radius:8px; margin:20px 0;">
+                    <h1 style="letter-spacing:10px; color:#C62828;">%s</h1>
+                    <p style="color:#888;">This OTP expires in <strong>10 minutes</strong></p>
+                </div>
+
+                <p style="margin-top:20px; color:#555;">
+                    Enter this OTP in the app to reset your password.
+                </p>
+
+                <p style="margin-top:30px; color:#888; font-size:12px;">
+                    If you did not request a password reset, please ignore this email.
+                    Your password will not be changed.
+                </p>
+            </body>
+            </html>
+        """.formatted(firstName, otp);
+    }
+
+    @Async
+    @Override
+    public void sendPasswordResetEmail(String toEmail, String firstName, String otp) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setFrom(fromEmail);
+            helper.setTo(toEmail);
+            helper.setSubject("Reset Your Password — OTP: " + otp);
+            helper.setText(buildPasswordResetEmailBody(firstName, otp), true);
+
+            mailSender.send(message);
+            log.info("Password reset email sent to: {}", toEmail);
+
+        } catch (MessagingException e) {
+            log.error("Failed to send password reset email to: {} | Error: {}", toEmail, e.getMessage());
+        }
     }
 }
