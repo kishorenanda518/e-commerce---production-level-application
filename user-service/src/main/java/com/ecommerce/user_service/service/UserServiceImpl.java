@@ -34,6 +34,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Instant;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -343,6 +344,77 @@ public class UserServiceImpl implements UserService {
 
         return userRepository.findAll(pageable)
                 .map(userMapper::toUserResponse);
+    }
+
+    @Override
+    @Transactional
+    public AuthResponse refreshToken(HttpServletRequest request, HttpServletResponse response) {
+
+        log.info("Refresh token request received");
+
+        // Step 1: Extract refresh token from cookie
+        String refreshToken = cookieUtil
+                .getCookieValue(request, jwtProperties.getCookie().getRefreshTokenName())
+                .orElseThrow(() -> new TokenExpiredException(
+                        "Refresh token not found. Please login again."
+                ));
+
+        // Step 2: Validate JWT signature and expiry
+        if (!jwtUtil.validateToken(refreshToken)) {
+            throw new TokenExpiredException("Refresh token has expired. Please login again.");
+        }
+
+        // Step 3: Extract userId
+        String userId = jwtUtil.extractUserId(refreshToken);
+
+        // Step 4: Check Redis — must exist and match
+        String storedToken = (String) redisTemplate.opsForValue()
+                .get(REFRESH_TOKEN_PREFIX + userId);
+
+        if (storedToken == null) {
+            throw new TokenExpiredException("Session expired. Please login again.");
+        }
+
+        if (!storedToken.equals(refreshToken)) {
+            // Mismatch → possible theft → kill session
+            deleteRefreshTokenFromRedis(userId);
+            cookieUtil.clearAccessTokenCookie(response);
+            cookieUtil.clearRefreshTokenCookie(response);
+            throw new TokenExpiredException("Invalid refresh token. Please login again.");
+        }
+
+        // Step 5: Load user for latest roles
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+
+        List<String> roles = user.getRoles().stream()
+                .map(Role::getName)
+                .collect(Collectors.toList());
+
+        // Step 6: Generate new tokens
+        String newAccessToken  = jwtUtil.generateAccessToken(user.getId(), user.getUsername(), roles);
+        String newRefreshToken = jwtUtil.generateRefreshToken(user.getId());
+
+        // Step 7: Rotate refresh token in Redis
+        deleteRefreshTokenFromRedis(userId);
+        storeRefreshTokenInRedis(userId, newRefreshToken);
+
+        // Step 8: Set new cookies
+        cookieUtil.setAccessTokenCookie(response, newAccessToken);
+        cookieUtil.setRefreshTokenCookie(response, newRefreshToken);
+
+        log.info("Token refreshed for userId: {}", userId);
+
+        return AuthResponse.builder()
+                .id(user.getId())
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .firstName(user.getProfile().getFirstName())
+                .lastName(user.getProfile().getLastName())
+                .roles(new HashSet<>(roles))
+                .tokenType("Bearer")
+                .expiresIn(jwtProperties.getJwt().getAccessTokenExpiryMs() / 1000)
+                .build();
     }
 
     // ════════════════════════════════════════════════════════════════

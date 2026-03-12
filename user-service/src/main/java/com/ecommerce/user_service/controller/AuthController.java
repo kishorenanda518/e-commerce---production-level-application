@@ -118,4 +118,18 @@ public class AuthController implements AuthApi {
                 ApiResponse.success("Users fetched successfully", users)
         );
     }
+
+
+    @Override
+    public ResponseEntity<ApiResponse<AuthResponse>> refreshToken(
+            HttpServletRequest request, HttpServletResponse response) {
+
+        log.info("Refresh token request received");
+
+        AuthResponse authResponse = userService.refreshToken(request, response);
+
+        return ResponseEntity.ok(
+                ApiResponse.success("Token refreshed successfully.", authResponse)
+        );
+    }
 }

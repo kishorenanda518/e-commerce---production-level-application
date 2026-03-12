@@ -264,4 +264,8 @@ public interface AuthApi {
                                                                    @RequestParam(defaultValue = "createdAt") String sortBy,
                                                                    @RequestParam(defaultValue = "desc") String direction
     );
+
+    @GetMapping("/refresh-token")
+    ResponseEntity<ApiResponse<AuthResponse>> refreshToken(
+            HttpServletRequest request, HttpServletResponse response);
 }

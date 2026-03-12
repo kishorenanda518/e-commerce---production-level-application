@@ -29,4 +29,5 @@ public interface UserService {
     AuthResponse login(LoginRequest request, HttpServletResponse response);
     void logout(HttpServletRequest request, HttpServletResponse response);
     Page<UserResponse> getAllUsers(int page, int size, String sortBy, String direction);
+    AuthResponse refreshToken(HttpServletRequest request, HttpServletResponse response);
 }

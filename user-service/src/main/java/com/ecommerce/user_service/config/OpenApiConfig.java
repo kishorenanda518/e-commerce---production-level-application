@@ -1,4 +1,4 @@
-package com.ecommerce.user_service.repository;
+package com.ecommerce.userservice.config;
 
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Contact;
