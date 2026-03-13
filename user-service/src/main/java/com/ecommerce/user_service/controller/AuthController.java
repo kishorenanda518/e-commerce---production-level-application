@@ -1,6 +1,5 @@
 package com.ecommerce.user_service.controller;
 
-import com.ecommerce.user_service.controller.AuthApi;
 import com.ecommerce.user_service.model.request.CreateUserRequest;
 import com.ecommerce.user_service.model.request.LoginRequest;
 import com.ecommerce.user_service.model.request.ResendVerificationRequest;

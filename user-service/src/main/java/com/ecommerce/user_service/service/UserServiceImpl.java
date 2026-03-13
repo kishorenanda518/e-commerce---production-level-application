@@ -7,6 +7,11 @@ import com.ecommerce.user_service.entity.User;
 import com.ecommerce.user_service.entity.UserProfile;
 import com.ecommerce.user_service.enums.UserStatus;
 import com.ecommerce.user_service.exception.*;
+import com.ecommerce.user_service.kafka.KafkaEventPublisher;
+import com.ecommerce.user_service.kafka.KafkaTopics;
+import com.ecommerce.user_service.kafka.event.UserLoginEvent;
+import com.ecommerce.user_service.kafka.event.UserLoginFailedEvent;
+import com.ecommerce.user_service.kafka.event.UserRegisteredEvent;
 import com.ecommerce.user_service.mapper.UserMapper;
 import com.ecommerce.user_service.model.request.CreateUserRequest;
 import com.ecommerce.user_service.model.request.LoginRequest;
@@ -55,6 +60,7 @@ public class UserServiceImpl implements UserService {
     private final CookieUtil cookieUtil;
     private final JwtProperties jwtProperties;
     private final RedisTemplate<String, String> redisTemplate;
+    private final KafkaEventPublisher kafkaEventPublisher;
 
     private static final int MAX_RESEND_PER_HOUR = 3;
     private static final String REFRESH_TOKEN_PREFIX   = "refresh::token::";
@@ -137,6 +143,18 @@ public class UserServiceImpl implements UserService {
 
         // ── Step 7: Persist (cascade saves profile too) ───────────────
         User savedUser = userRepository.save(user);
+
+        kafkaEventPublisher.publish(
+                KafkaTopics.USER_REGISTERED,
+                savedUser.getId(),
+                UserRegisteredEvent.builder()
+                        .userId(savedUser.getId())
+                        .username(savedUser.getUsername())
+                        .email(savedUser.getEmail())
+                        .firstName(savedUser.getProfile().getFirstName())
+                        .timestamp(Instant.now())
+                        .build()
+        );
 
         log.info("User registered successfully with id: {}", savedUser.getId());
 
@@ -248,6 +266,15 @@ public class UserServiceImpl implements UserService {
 
         // Step 4: Verify password
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
+            kafkaEventPublisher.publish(
+                    KafkaTopics.USER_LOGIN_FAILED,
+                    user.getId(),
+                    UserLoginFailedEvent.builder()
+                            .attemptedUsername(request.getUsernameOrEmail())
+                            .reason("Invalid password")
+                            .timestamp(Instant.now())
+                            .build()
+            );
             throw new InvalidCredentialsException("Invalid username/email or password");
         }
 
@@ -275,6 +302,16 @@ public class UserServiceImpl implements UserService {
         // Step 9: Update lastLoginAt
         user.setLastLoginAt(Instant.now());
         userRepository.save(user);
+
+        kafkaEventPublisher.publish(
+                KafkaTopics.USER_LOGIN_SUCCESS,
+                user.getId(),
+                UserLoginEvent.builder()
+                        .userId(user.getId())
+                        .username(user.getUsername())
+                        .email(user.getEmail())
+                        .timestamp(Instant.now())
+                        .build());
 
         log.info("Login successful for user: {} | id: {}", user.getUsername(), user.getId());
 
@@ -322,6 +359,7 @@ public class UserServiceImpl implements UserService {
 
             // Step 3: Delete refresh token from Redis
             deleteRefreshTokenFromRedis(userId);
+
 
             log.info("User logged out: {} | token blacklisted", userId);
         }

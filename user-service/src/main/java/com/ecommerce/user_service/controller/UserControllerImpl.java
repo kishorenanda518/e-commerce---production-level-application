@@ -3,6 +3,10 @@ package com.ecommerce.user_service.controller;
 import com.ecommerce.user_service.entity.User;
 import com.ecommerce.user_service.enums.UserStatus;
 import com.ecommerce.user_service.exception.*;
+import com.ecommerce.user_service.kafka.KafkaEventPublisher;
+import com.ecommerce.user_service.kafka.KafkaTopics;
+import com.ecommerce.user_service.kafka.event.UserPasswordChangedEvent;
+import com.ecommerce.user_service.kafka.event.UserRegisteredEvent;
 import com.ecommerce.user_service.model.request.ForgotPasswordRequest;
 import com.ecommerce.user_service.model.request.ResetPasswordRequest;
 import com.ecommerce.user_service.model.response.ApiResponse;
@@ -17,6 +21,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.Instant;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -28,6 +34,8 @@ public class UserControllerImpl implements UserController {
     private final EmailService          emailService;
     private final CommonMethods         commonMethods;
     private final BCryptPasswordEncoder passwordEncoder;
+    private final KafkaEventPublisher kafkaEventPublisher;
+
 
     private static final int MAX_RESEND_PER_HOUR = 3;
 
@@ -131,6 +139,14 @@ public class UserControllerImpl implements UserController {
 
         log.info("Password reset successfully for: {}", request.getEmail());
 
+        kafkaEventPublisher.publish(
+                KafkaTopics.USER_PASSWORD_CHANGED,
+                user.getId(),
+                UserPasswordChangedEvent.builder()
+                        .userId(user.getId())
+                        .ipAddress("543541sgsedr")
+                        .timestamp(Instant.now())
+                        .build());
         return ResponseEntity.ok(
                 ApiResponse.success(
                         "Password reset successfully. Please login with your new password.",

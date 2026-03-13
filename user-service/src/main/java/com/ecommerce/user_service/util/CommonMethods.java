@@ -1,6 +1,7 @@
 package com.ecommerce.user_service.util;
 
 import com.ecommerce.user_service.config.JwtProperties;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -92,5 +93,25 @@ public class CommonMethods {
     // ── Delete Forgot Password Count ─────────────────────────────────
     public void deleteForgotPasswordCount(String email) {
         redisTemplate.delete(FORGOT_PASSWORD_COUNT_PREFIX + email);
+    }
+
+    // ── Extract IP Address from Request ─────────────────────────────
+    public String extractIpAddress(HttpServletRequest request) {
+        String ip = request.getHeader("X-Forwarded-For");
+        if (ip != null && !ip.isEmpty() && !"unknown".equalsIgnoreCase(ip)) {
+            // X-Forwarded-For can contain multiple IPs — take the first one
+            ip = ip.split(",")[0].trim();
+        } else {
+            ip = request.getHeader("X-Real-IP");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getRemoteAddr();
+        }
+        return ip;
+    }
+
+    // ── Extract User Agent from Request ─────────────────────────────
+    public String extractUserAgent(HttpServletRequest request) {
+        return request.getHeader("User-Agent");
     }
 }
