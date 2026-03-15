@@ -1,0 +1,100 @@
+spring:
+  application:
+    name: product-service
+
+  # ── DATABASE — MySQL ──────────────────────────────────────────────
+  datasource:
+    url: jdbc:mysql://localhost:3306/product_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: root
+    password: nanda
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 5
+      pool-name: ProductServicePool
+  cloud:
+    openfeign:
+      circuitbreaker:
+        enabled: false
+  # ── JPA ───────────────────────────────────────────────────────────
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+        format_sql: true
+
+  # ── REDIS ─────────────────────────────────────────────────────────
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 2000ms
+      repositories:
+        enabled: false
+
+  # ── KAFKA ─────────────────────────────────────────────────────────
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        spring.json.add.type.headers: false
+    consumer:
+      group-id: product-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+
+  # ── FLYWAY ────────────────────────────────────────────────────────
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+  # ── FILE UPLOAD ───────────────────────────────────────────────────
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 50MB
+
+# ── SERVER ────────────────────────────────────────────────────────
+server:
+  port: 8082
+
+# ── APP CUSTOM ────────────────────────────────────────────────────
+app:
+  base-url: http://localhost:8082
+  jwt:
+    secret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+    access-token-expiry-ms: 900000
+    refresh-token-expiry-ms: 604800000
+  cookie:
+    access-token-name: access_token
+    refresh-token-name: refresh_token
+    secure: false
+    same-site: Strict
+    path: /
+
+# ── SWAGGER ───────────────────────────────────────────────────────
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+
+# ── LOGGING ───────────────────────────────────────────────────────
+logging:
+  level:
+    com.ecommerce: DEBUG
+    org.hibernate.SQL: DEBUG
+  file:
+    name: logs/product-service.log
+  logback:
+    rollingpolicy:
+      max-file-size: 10MB
+      max-history: 7
+      file-name-pattern: logs/product-service-%d{yyyy-MM-dd}.%i.log

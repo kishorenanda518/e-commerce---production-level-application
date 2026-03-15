@@ -1,6 +1,8 @@
 package com.ecommerce.user_service.service;
 
 
+import com.ecommerce.user_service.client.ProductServiceClient;
+import com.ecommerce.user_service.client.response.ProductListResponse;
 import com.ecommerce.user_service.config.JwtProperties;
 import com.ecommerce.user_service.entity.Role;
 import com.ecommerce.user_service.entity.User;
@@ -16,6 +18,7 @@ import com.ecommerce.user_service.mapper.UserMapper;
 import com.ecommerce.user_service.model.request.CreateUserRequest;
 import com.ecommerce.user_service.model.request.LoginRequest;
 import com.ecommerce.user_service.model.response.AuthResponse;
+import com.ecommerce.user_service.model.response.LoginResponse;
 import com.ecommerce.user_service.model.response.UserResponse;
 import com.ecommerce.user_service.repository.RoleRepository;
 import com.ecommerce.user_service.repository.UserRepository;
@@ -61,6 +64,7 @@ public class UserServiceImpl implements UserService {
     private final JwtProperties jwtProperties;
     private final RedisTemplate<String, String> redisTemplate;
     private final KafkaEventPublisher kafkaEventPublisher;
+    private final ProductServiceClient productServiceClient;
 
     private static final int MAX_RESEND_PER_HOUR = 3;
     private static final String REFRESH_TOKEN_PREFIX   = "refresh::token::";
@@ -239,29 +243,28 @@ public class UserServiceImpl implements UserService {
     // ════════════════════════════════════════════════════════════════
     @Override
     @Transactional
-    public AuthResponse login(LoginRequest request, HttpServletResponse response) {
+    public LoginResponse login(LoginRequest request,
+                               HttpServletRequest httpRequest,
+                               HttpServletResponse response) {
 
         log.info("Login attempt for: {}", request.getUsernameOrEmail());
 
-        // Step 1: Load user by username or email
+        // Step 1: Load user
         User user = userRepository
                 .findByUsernameOrEmail(request.getUsernameOrEmail(), request.getUsernameOrEmail())
                 .orElseThrow(() -> new InvalidCredentialsException(
-                        "Invalid username/email or password"
-                ));
+                        "Invalid username/email or password"));
 
-        // Step 2: Check account suspended
+        // Step 2: Check suspended
         if (user.getStatus() == UserStatus.SUSPENDED) {
             throw new AccountSuspendedException(
-                    "Your account has been suspended. Please contact support."
-            );
+                    "Your account has been suspended. Please contact support.");
         }
 
         // Step 3: Check email verified
         if (!Boolean.TRUE.equals(user.getEmailVerified())) {
             throw new EmailNotVerifiedException(
-                    "Please verify your email before logging in. Check your inbox for the OTP."
-            );
+                    "Please verify your email before logging in.");
         }
 
         // Step 4: Verify password
@@ -273,36 +276,32 @@ public class UserServiceImpl implements UserService {
                             .attemptedUsername(request.getUsernameOrEmail())
                             .reason("Invalid password")
                             .timestamp(Instant.now())
-                            .build()
-            );
+                            .build());
             throw new InvalidCredentialsException("Invalid username/email or password");
         }
 
-        // Step 5: Get roles as list
+        // Step 5: Get roles
         List<String> roles = user.getRoles()
                 .stream()
                 .map(Role::getName)
                 .collect(Collectors.toList());
 
-        // Step 6: Generate access token (15 min)
-        String accessToken = jwtUtil.generateAccessToken(
-                user.getId(),
-                user.getUsername(),
-                roles
-        );
-
-        // Step 7: Generate refresh token (7 days) → store in Redis
+        // Step 6: Generate tokens
+        String accessToken  = jwtUtil.generateAccessToken(user.getId(), user.getUsername(), roles);
         String refreshToken = jwtUtil.generateRefreshToken(user.getId());
+
+        // Step 7: Store refresh token
         storeRefreshTokenInRedis(user.getId(), refreshToken);
 
-        // Step 8: Set both tokens as HttpOnly cookies
+        // Step 8: Set cookies
         cookieUtil.setAccessTokenCookie(response, accessToken);
         cookieUtil.setRefreshTokenCookie(response, refreshToken);
 
-        // Step 9: Update lastLoginAt
+        // Step 9: Update last login
         user.setLastLoginAt(Instant.now());
         userRepository.save(user);
 
+        // Step 10: Publish login event
         kafkaEventPublisher.publish(
                 KafkaTopics.USER_LOGIN_SUCCESS,
                 user.getId(),
@@ -313,18 +312,23 @@ public class UserServiceImpl implements UserService {
                         .timestamp(Instant.now())
                         .build());
 
-        log.info("Login successful for user: {} | id: {}", user.getUsername(), user.getId());
+        // Step 11: Load products via Feign
+        LoginResponse.ProductSummary productSummary = loadProductsViaFeign(accessToken);
 
-        // Step 10: Return AuthResponse (tokens are in cookies — not in body)
-        return AuthResponse.builder()
+        log.info("Login successful for user: {}", user.getUsername());
+
+        // Step 12: Return LoginResponse with products
+        return LoginResponse.builder()
                 .id(user.getId())
                 .username(user.getUsername())
                 .email(user.getEmail())
                 .firstName(user.getProfile().getFirstName())
                 .lastName(user.getProfile().getLastName())
-                .roles(roles.stream().collect(Collectors.toSet()))
+                .roles(new HashSet<>(roles))
                 .tokenType("Bearer")
                 .expiresIn(jwtProperties.getJwt().getAccessTokenExpiryMs() / 1000)
+                .timestamp(Instant.now())
+                .products(productSummary)
                 .build();
     }
 
@@ -473,5 +477,47 @@ public class UserServiceImpl implements UserService {
     private void deleteRefreshTokenFromRedis(String userId) {
         redisTemplate.delete(REFRESH_TOKEN_PREFIX + userId);
         log.debug("Refresh token deleted from Redis for userId: {}", userId);
+    }
+
+    // ── Load products via Feign Client ────────────────────────────────
+    private LoginResponse.ProductSummary loadProductsViaFeign(String accessToken) {
+        try {
+            ProductListResponse productResponse = productServiceClient
+                    .getProducts(0, 20, "newest", "Bearer " + accessToken);
+
+            if (productResponse == null || productResponse.getData() == null) {
+                log.warn("Product service returned empty response");
+                return null;
+            }
+
+            List<LoginResponse.ProductItem> items = productResponse
+                    .getData()
+                    .getContent()
+                    .stream()
+                    .map(p -> LoginResponse.ProductItem.builder()
+                            .id(p.getId())
+                            .name(p.getName())
+                            .sku(p.getSku())
+                            .price(p.getPrice())
+                            .categoryName(p.getCategoryName())
+                            .brandName(p.getBrandName())
+                            .inStock(p.getInStock())
+                            .imageUrls(p.getImageUrls())
+                            .build())
+                    .collect(Collectors.toList());
+
+            log.info("Loaded {} products after login", items.size());
+
+            return LoginResponse.ProductSummary.builder()
+                    .totalProducts(productResponse.getData().getTotalElements())
+                    .totalPages(productResponse.getData().getTotalPages())
+                    .currentPage(0)
+                    .items(items)
+                    .build();
+
+        } catch (Exception e) {
+            log.warn("Could not load products from product-service: {}", e.getMessage());
+            return null;
+        }
     }
 }

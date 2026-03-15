@@ -5,6 +5,7 @@ import com.ecommerce.user_service.model.request.CreateUserRequest;
 import com.ecommerce.user_service.model.request.LoginRequest;
 import com.ecommerce.user_service.model.response.ApiResponse;
 import com.ecommerce.user_service.model.response.AuthResponse;
+import com.ecommerce.user_service.model.response.LoginResponse;
 import com.ecommerce.user_service.model.response.UserResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -26,7 +27,9 @@ public interface UserService {
     UserResponse registerUser(CreateUserRequest request);
     void verifyEmail(String email, String token);
     void resendVerificationEmail(String email);
-    AuthResponse login(LoginRequest request, HttpServletResponse response);
+    LoginResponse login(LoginRequest request,
+                        HttpServletRequest httpRequest,
+                        HttpServletResponse response);
     void logout(HttpServletRequest request, HttpServletResponse response);
     Page<UserResponse> getAllUsers(int page, int size, String sortBy, String direction);
     AuthResponse refreshToken(HttpServletRequest request, HttpServletResponse response);

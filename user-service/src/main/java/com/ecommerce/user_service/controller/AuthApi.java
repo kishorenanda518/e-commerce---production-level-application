@@ -1,10 +1,9 @@
 package com.ecommerce.user_service.controller;
 
-import com.ecommerce.user_service.model.request.CreateUserRequest;
-import com.ecommerce.user_service.model.request.LoginRequest;
-import com.ecommerce.user_service.model.request.ResendVerificationRequest;
+import com.ecommerce.user_service.model.request.*;
 import com.ecommerce.user_service.model.response.ApiResponse;
 import com.ecommerce.user_service.model.response.AuthResponse;
+import com.ecommerce.user_service.model.response.LoginResponse;
 import com.ecommerce.user_service.model.response.UserResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -228,8 +227,9 @@ public interface AuthApi {
                 """))
             )
     })
-    ResponseEntity<ApiResponse<AuthResponse>> login(
+    ResponseEntity<ApiResponse<LoginResponse>> login(
             @Valid @RequestBody LoginRequest request,
+            HttpServletRequest httpRequest,
             HttpServletResponse response
     );
 
@@ -268,4 +268,16 @@ public interface AuthApi {
     @GetMapping("/refresh-token")
     ResponseEntity<ApiResponse<AuthResponse>> refreshToken(
             HttpServletRequest request, HttpServletResponse response);
+
+    // ── FORGOT PASSWORD ───────────────────────────────────────────────
+    @Operation(summary = "Forgot password — sends OTP to registered email")
+    @PostMapping("/forgot-password")
+    ResponseEntity<ApiResponse<Void>> forgotPassword(
+            @Valid @RequestBody ForgotPasswordRequest request);
+
+    // ── RESET PASSWORD ────────────────────────────────────────────────
+    @Operation(summary = "Reset password using OTP received via email")
+    @PostMapping("/reset-password")
+    ResponseEntity<ApiResponse<Void>> resetPassword(
+            @Valid @RequestBody ResetPasswordRequest request);
 }

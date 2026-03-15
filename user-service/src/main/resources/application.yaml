@@ -52,7 +52,7 @@ spring:
 
   # ── FLYWAY ────────────────────────────────────────────────────────
   flyway:
-    enabled: true
+    enabled: false
     locations: classpath:db/migration
     baseline-on-migrate: true
 
@@ -87,6 +87,12 @@ app:
     secure: false
     same-site: Strict
     path: /
+  product-service:
+    url: http://localhost:8082
+  cloud:
+    openfeign:
+      circuitbreaker:
+        enabled: false
 
 # ── SWAGGER ───────────────────────────────────────────────────────
 springdoc:

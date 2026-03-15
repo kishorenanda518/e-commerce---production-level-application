@@ -114,4 +114,14 @@ public class CommonMethods {
     public String extractUserAgent(HttpServletRequest request) {
         return request.getHeader("User-Agent");
     }
+
+    public String extractAccessTokenFromCookie(HttpServletRequest request) {
+        if (request.getCookies() == null) return null;
+        for (jakarta.servlet.http.Cookie cookie : request.getCookies()) {
+            if (jwtProperties.getCookie().getAccessTokenName().equals(cookie.getName())) {
+                return cookie.getValue();
+            }
+        }
+        return null;
+    }
 }
