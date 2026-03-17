@@ -79,7 +79,7 @@ app:
   base-url: http://localhost:8081
   jwt:
     secret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
-    access-token-expiry-ms: 60000
+    access-token-expiry-ms: 3600000
     refresh-token-expiry-ms: 604800000
   cookie:
     access-token-name: access_token
@@ -87,8 +87,6 @@ app:
     secure: false
     same-site: Strict
     path: /
-  product-service:
-    url: http://localhost:8082
   cloud:
     openfeign:
       circuitbreaker:
@@ -114,3 +112,12 @@ logging:
       max-file-size: 10MB
       max-history: 7
       file-name-pattern: logs/user-service-%d{yyyy-MM-dd}.%i.log
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${server.port}

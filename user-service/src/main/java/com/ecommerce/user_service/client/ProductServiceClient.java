@@ -6,10 +6,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 
-@FeignClient(
-        name = "product-service",
-        url = "${app.product-service.url}"
-)
+
+@FeignClient(name = "product-service")
 public interface ProductServiceClient {
 
     @GetMapping("/api/v1/products")

@@ -150,6 +150,11 @@
 			<artifactId>spring-cloud-starter-openfeign</artifactId>
 			<version>4.1.0</version>
 		</dependency>
+		<!-- ── EUREKA CLIENT ─────────────────────────────────────────── -->
+		<dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
+		</dependency>
 
 	</dependencies>
 

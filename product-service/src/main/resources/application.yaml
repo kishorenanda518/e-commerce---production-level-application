@@ -98,3 +98,12 @@ logging:
       max-file-size: 10MB
       max-history: 7
       file-name-pattern: logs/product-service-%d{yyyy-MM-dd}.%i.log
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${server.port}
