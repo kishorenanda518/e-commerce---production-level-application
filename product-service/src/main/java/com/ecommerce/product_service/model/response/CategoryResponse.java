@@ -16,5 +16,4 @@ public class CategoryResponse {
     private String               imageUrl;
     private Integer              displayOrder;
     private Boolean              isActive;
-    private List<CategoryResponse> children;
 }

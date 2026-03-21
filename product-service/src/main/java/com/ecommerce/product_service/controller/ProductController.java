@@ -17,17 +17,19 @@ import java.util.List;
 @RequestMapping("/api/v1/products")
 public interface ProductController {
 
-    @Operation(summary = "Get all products paginated")
+    @Operation(summary = "Get all products with filters")
     @GetMapping
     ResponseEntity<ApiResponse<Page<ProductResponse>>> getAllProducts(
-            @RequestParam(defaultValue = "0")       int page,
-            @RequestParam(defaultValue = "20")      int size,
-            @RequestParam(defaultValue = "newest")  String sort,
-            @RequestParam(required = false)         String categoryId,
-            @RequestParam(required = false)         String brand,
-            @RequestParam(required = false)         Boolean inStock
+            @RequestParam(defaultValue = "0")      int     page,
+            @RequestParam(defaultValue = "12")     int     size,
+            @RequestParam(defaultValue = "newest") String  sort,
+            @RequestParam(required = false)        String  categoryId,
+            @RequestParam(required = false)        String  brand,
+            @RequestParam(required = false)        Boolean inStock,
+            @RequestParam(required = false)        String  minPrice,
+            @RequestParam(required = false)        String  maxPrice,
+            @RequestParam(required = false)        String  q
     );
-
     @Operation(summary = "Get product by ID")
     @GetMapping("/{id}")
     ResponseEntity<ApiResponse<ProductDetailResponse>> getProductById(

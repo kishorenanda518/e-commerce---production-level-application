@@ -3,56 +3,47 @@ package com.ecommerce.product_service.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
-import jakarta.persistence.Id;
+
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
 @Entity
 @Table(name = "categories")
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
+@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Access(AccessType.FIELD)
 public class Category {
 
     @Id
     @Column(name = "id", length = 36, nullable = false, updatable = false)
     private String id;
 
-    @Column(nullable = false, length = 100)
+    @Column(name = "name", nullable = false, length = 100)
     private String name;
 
-    @Column(unique = true, nullable = false, length = 120)
+    @Column(name = "slug", unique = true, length = 120)
     private String slug;
 
-    @Column(length = 500)
+    @Column(name = "description", length = 500)
     private String description;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "parent_id")
-    private Category parent;
+    // ── plain String — used by CategoryRepository queries ─────
+    @Column(name = "parent_id", length = 36)
+    private String parentId;
 
-    @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @Builder.Default
-    private List<Category> children = new ArrayList<>();
+    @Column(name = "display_order")
+    private Integer displayOrder;
+
+    @Column(name = "is_active")
+    private Boolean isActive;
 
     @Column(name = "image_url", length = 500)
     private String imageUrl;
 
-    @Column(name = "display_order")
-    @Builder.Default
-    private Integer displayOrder = 0;
-
-    @Column(name = "is_active", nullable = false)
-    @Builder.Default
-    private Boolean isActive = true;
-
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private Instant createdAt;
+
+    // ── NO @OneToMany children — this was causing LazyInit ────
 
     @PrePersist
     public void generateId() {

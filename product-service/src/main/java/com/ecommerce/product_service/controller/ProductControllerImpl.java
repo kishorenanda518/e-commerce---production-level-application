@@ -15,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Slf4j
@@ -28,8 +29,9 @@ public class ProductControllerImpl implements ProductController {
 
     @Override
     public ResponseEntity<ApiResponse<Page<ProductResponse>>> getAllProducts(
-            int page, int size, String sort, String categoryId,
-            String brand, Boolean inStock) {
+            int page, int size, String sort,
+            String categoryId, String brand, Boolean inStock,
+            String minPrice, String maxPrice, String q) {
 
         ProductFilterRequest filter = new ProductFilterRequest();
         filter.setPage(page);
@@ -38,6 +40,10 @@ public class ProductControllerImpl implements ProductController {
         filter.setCategoryId(categoryId);
         filter.setBrand(brand);
         filter.setInStock(inStock);
+        filter.setQ(q);
+
+        if (minPrice != null) filter.setMinPrice(new BigDecimal(minPrice));
+        if (maxPrice != null) filter.setMaxPrice(new BigDecimal(maxPrice));
 
         return ResponseEntity.ok(ApiResponse.success(
                 "Products fetched successfully.",

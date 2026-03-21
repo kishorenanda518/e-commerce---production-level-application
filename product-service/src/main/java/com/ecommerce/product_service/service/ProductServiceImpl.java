@@ -51,9 +51,47 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional(readOnly = true)
     public Page<ProductResponse> getAllProducts(ProductFilterRequest filter) {
-        Pageable pageable = buildPageable(filter.getPage(), filter.getSize(), filter.getSort());
-        return productRepository.findByStatusWithDetails(ProductStatus.ACTIVE, pageable)
-                .map(this::toProductResponse);
+        Pageable pageable = buildPageable(
+                filter.getPage(), filter.getSize(), filter.getSort());
+        String categoryId = nullIfBlank(filter.getCategoryId());
+
+        if (categoryId != null) {
+            // check if this category has children
+            List<String> childIds = categoryRepository
+                    .findByParentIdAndIsActiveTrue(categoryId)
+                    .stream()
+                    .map(cat -> cat.getId())
+                    .collect(Collectors.toList());
+
+            if (!childIds.isEmpty()) {
+                // parent category clicked → fetch from ALL child categories
+                log.info("Parent category {} has {} children — fetching all",
+                        categoryId, childIds.size());
+                return productRepository.findByStatusAndCategoryIdIn(
+                        ProductStatus.ACTIVE,
+                        childIds,
+                        pageable
+                ).map(this::toProductResponse);
+            }
+        }
+        // use dynamic filter query — null params are ignored in WHERE
+        return productRepository.findWithFilters(
+                ProductStatus.ACTIVE,
+                nullIfBlank(filter.getCategoryId()),
+                nullIfBlank(filter.getBrand()),
+                filter.getMinPrice(),
+                filter.getMaxPrice(),
+                nullIfBlank(filter.getQ()),
+                filter.getInStock(),
+                pageable
+        ).map(this::toProductResponse);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ProductResponse> searchProducts(ProductFilterRequest filter) {
+        // searchProducts just delegates to getAllProducts — same logic
+        return getAllProducts(filter);
     }
 
     @Override
@@ -72,18 +110,7 @@ public class ProductServiceImpl implements ProductService {
         return toProductDetailResponse(product);
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public Page<ProductResponse> searchProducts(ProductFilterRequest filter) {
-        Pageable pageable = buildPageable(filter.getPage(), filter.getSize(), filter.getSort());
-        if (filter.getCategoryId() != null) {
-            return productRepository
-                    .findByCategoryIdAndStatus(filter.getCategoryId(), ProductStatus.ACTIVE, pageable)
-                    .map(this::toProductResponse);
-        }
-        return productRepository.findByStatusWithDetails(ProductStatus.ACTIVE, pageable)
-                .map(this::toProductResponse);
-    }
+
 
     @Override
     @Transactional(readOnly = true)
@@ -727,5 +754,9 @@ public class ProductServiceImpl implements ProductService {
                 .helpfulCount(review.getHelpfulCount())
                 .createdAt(review.getCreatedAt())
                 .build();
+    }
+    // ── helper ────────────────────────────────────────────────────
+    private String nullIfBlank(String value) {
+        return (value == null || value.isBlank()) ? null : value;
     }
 }
