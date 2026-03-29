@@ -1,0 +1,8 @@
+# src/main/resources/application-docker.yml — API Gateway
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://service-registry:8761/eureka/
+  instance:
+    prefer-ip-address: true

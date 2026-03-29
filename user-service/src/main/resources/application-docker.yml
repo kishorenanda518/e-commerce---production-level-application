@@ -1,0 +1,34 @@
+# src/main/resources/application-docker.yml
+# ─────────────────────────────────────────────────────────────
+# This file OVERRIDES application.yml when running in Docker.
+# Docker passes: SPRING_PROFILES_ACTIVE=docker
+# ─────────────────────────────────────────────────────────────
+
+spring:
+  datasource:
+    url: jdbc:mysql://mysql-user:3306/user_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+    username: nanda
+    password: nanda
+  data:
+    redis:
+      host: redis
+      port: 6379
+  kafka:
+    bootstrap-servers: kafka:29092
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://service-registry:8761/eureka/
+  instance:
+    prefer-ip-address: true
+
+# ← ADD THIS SECTION
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always

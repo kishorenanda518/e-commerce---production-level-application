@@ -1,0 +1,146 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+
+  # ── Cloud Gateway routes ──────────────────────────────────────
+  cloud:
+    gateway:
+      # Global CORS — applied to every route
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins:
+              - "http://localhost:3000"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - PATCH
+              - DELETE
+              - OPTIONS
+            allowedHeaders:
+              - "*"
+            allowCredentials: true
+            maxAge: 3600
+
+      # Default filters applied to every route
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
+
+      routes:
+
+        # ── Auth & User Service (port 8081) ───────────────────
+        - id: user-service-auth
+          uri: lb://user-service
+          predicates:
+            - Path=/api/v1/auth/**
+          filters:
+            - name: JwtAuthFilter
+              args:
+                requireAuth: false    # public — no token needed
+
+        - id: user-service-users
+          uri: lb://user-service
+          predicates:
+            - Path=/api/v1/users/**
+          filters:
+            - name: JwtAuthFilter
+              args:
+                requireAuth: true     # protected
+
+        - id: user-service-admin
+          uri: lb://user-service
+          predicates:
+            - Path=/api/v1/admin/users/**
+          filters:
+            - name: JwtAuthFilter
+              args:
+                requireAuth: true
+                requiredRole: ROLE_ADMIN
+
+        # ── Product Service (port 8082) ───────────────────────
+        - id: product-service-public
+          uri: lb://product-service
+          predicates:
+            - Path=/api/v1/products/**, /api/v1/categories/**
+          filters:
+            - name: JwtAuthFilter
+              args:
+                requireAuth: false    # public browsing
+
+        - id: product-service-admin
+          uri: lb://product-service
+          predicates:
+            - Path=/api/v1/admin/products/**
+          filters:
+            - name: JwtAuthFilter
+              args:
+                requireAuth: true
+                requiredRole: ROLE_ADMIN
+
+        - id: product-service-internal
+          uri: lb://product-service
+          predicates:
+            - Path=/api/v1/internal/**
+          filters:
+            - name: JwtAuthFilter
+              args:
+                requireAuth: false    # internal service-to-service
+
+        # ── Order Service (port 8083) ─────────────────────────
+        - id: order-service
+          uri: lb://order-service
+          predicates:
+            - Path=/api/v1/orders/**
+          filters:
+            - name: JwtAuthFilter
+              args:
+                requireAuth: true     # must be logged in
+
+        - id: order-service-admin
+          uri: lb://order-service
+          predicates:
+            - Path=/api/v1/admin/orders/**
+          filters:
+            - name: JwtAuthFilter
+              args:
+                requireAuth: true
+                requiredRole: ROLE_ADMIN
+
+    # Eureka — find services by name
+    discovery:
+      enabled: true
+
+# ── Eureka Client ─────────────────────────────────────────────
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    fetch-registry: true
+    register-with-eureka: true
+  instance:
+    prefer-ip-address: true
+
+# ── JWT secret — MUST match User Service ────────────────────
+app:
+  jwt:
+    secret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+
+# ── Actuator ─────────────────────────────────────────────────
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, gateway
+  endpoint:
+    health:
+      show-details: always
+
+# ── Logging ──────────────────────────────────────────────────
+logging:
+  level:
+    org.springframework.cloud.gateway: INFO
+    com.ecommerce.api_gateway: DEBUG

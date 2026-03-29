@@ -1,0 +1,374 @@
+
+
+# ═══════════════════════════════════════════════════════════════
+#  Royal Mart — Full Stack Docker Compose
+#  Run: docker-compose up -d
+#  Stop: docker-compose down
+#  Logs: docker-compose logs -f <service-name>
+# ═══════════════════════════════════════════════════════════════
+
+services:
+
+  # ════════════════════════════════════════════════════════════
+  #  INFRASTRUCTURE — starts first
+  # ════════════════════════════════════════════════════════════
+
+  # ── MySQL — User DB ────────────────────────────────────────
+  mysql-user:
+    image: mysql:8.0
+    container_name: rm-mysql-user
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: nanda
+      MYSQL_DATABASE: user_db
+      MYSQL_USER: nanda
+      MYSQL_PASSWORD: nanda
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql-user-data:/var/lib/mysql
+    networks:
+      - royal-mart-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pnanda"]
+      interval: 10s
+      timeout: 15s
+      retries: 10
+      start_period: 200s
+
+  # ── MySQL — Product DB ─────────────────────────────────────
+  mysql-product:
+    image: mysql:8.0
+    container_name: rm-mysql-product
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: nanda
+      MYSQL_DATABASE: product_db
+      MYSQL_USER: nanda
+      MYSQL_PASSWORD: nanda
+    ports:
+      - "3308:3306"
+    volumes:
+      - mysql-product-data:/var/lib/mysql
+    networks:
+      - royal-mart-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pnanda"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 200s
+
+  # ── MySQL — Order DB ───────────────────────────────────────
+  mysql-order:
+    image: mysql:8.0
+    container_name: rm-mysql-order
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: nanda
+      MYSQL_DATABASE: order_db
+      MYSQL_USER: nanda
+      MYSQL_PASSWORD: nanda
+    ports:
+      - "3309:3306"
+    volumes:
+      - mysql-order-data:/var/lib/mysql
+    networks:
+      - royal-mart-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pnanda"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 200s
+
+  # ── Redis ──────────────────────────────────────────────────
+  redis:
+    image: redis:7.2-alpine
+    container_name: rm-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - royal-mart-network
+    command: redis-server --appendonly yes --requirepass ""
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # ── Zookeeper (required by Kafka) ──────────────────────────
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: rm-zookeeper
+    restart: unless-stopped
+    environment:
+      ZOOKEEPER_CLIENT_PORT: "2181"
+      ZOOKEEPER_TICK_TIME: "2000"
+    ports:
+      - "2182:2181"
+    volumes:
+      - zookeeper-data:/var/lib/zookeeper/data
+      - zookeeper-logs:/var/lib/zookeeper/log
+    networks:
+      - royal-mart-network
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Kafka ──────────────────────────────────────────────────
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: rm-kafka
+    restart: unless-stopped
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    ports:
+      - "9094:9092"
+      - "29094:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      # Internal (container-to-container): kafka:29092
+      # External (host machine):           localhost:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_LOG_RETENTION_HOURS: 168
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    networks:
+      - royal-mart-network
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9094 > /dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 200s
+
+  # ════════════════════════════════════════════════════════════
+  #  MICROSERVICES — starts after infrastructure
+  # ════════════════════════════════════════════════════════════
+
+  # ── Service Registry (Eureka) ──────────────────────────────
+  service-registry:
+    build:
+      context: ./service-registry
+      dockerfile: Dockerfile
+    container_name: rm-service-registry
+    restart: unless-stopped
+    ports:
+      - "8761:8761"
+    networks:
+      - royal-mart-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8761/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 200s
+
+  # ── User Service ───────────────────────────────────────────
+  user-service:
+    build:
+      context: ./user-service
+      dockerfile: Dockerfile
+    container_name: rm-user-service
+    restart: unless-stopped
+    depends_on:
+      mysql-user:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      service-registry:
+        condition: service_healthy
+    ports:
+      - "8081:8081"
+    networks:
+      - royal-mart-network
+    environment:
+      # Database
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-user:3306/user_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: nanda
+      SPRING_DATASOURCE_PASSWORD: nanda
+      # Redis
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      # Kafka
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      # Eureka
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://service-registry:8761/eureka/
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+      # Profile
+      SPRING_PROFILES_ACTIVE: docker
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8081/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 200s
+
+  # ── Product Service ────────────────────────────────────────
+  product-service:
+    build:
+      context: ./product-service
+      dockerfile: Dockerfile
+    container_name: rm-product-service
+    restart: unless-stopped
+    depends_on:
+      mysql-product:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      service-registry:
+        condition: service_healthy
+    ports:
+      - "8082:8082"
+    networks:
+      - royal-mart-network
+    environment:
+      # Database
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-product:3306/product_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: nanda
+      SPRING_DATASOURCE_PASSWORD: nanda
+      # Kafka
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      # Eureka
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://service-registry:8761/eureka/
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+      # Profile
+      SPRING_PROFILES_ACTIVE: docker
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8082/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 200s
+
+  # ── Order Service ──────────────────────────────────────────
+  order-service:
+    build:
+      context: ./order-service
+      dockerfile: Dockerfile
+    container_name: rm-order-service
+    restart: unless-stopped
+    depends_on:
+      mysql-order:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      service-registry:
+        condition: service_healthy
+      user-service:
+        condition: service_healthy
+      product-service:
+        condition: service_healthy
+    ports:
+      - "8083:8083"
+    networks:
+      - royal-mart-network
+    environment:
+      # Database
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-order:3306/order_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: nanda
+      SPRING_DATASOURCE_PASSWORD: nanda
+      # Kafka
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      # Eureka
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://service-registry:8761/eureka/
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+      # Profile
+      SPRING_PROFILES_ACTIVE: docker
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8083/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 200s
+
+  # ── API Gateway ────────────────────────────────────────────
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: rm-api-gateway
+    restart: unless-stopped
+    depends_on:
+      service-registry:
+        condition: service_healthy
+      user-service:
+        condition: service_healthy
+      product-service:
+        condition: service_healthy
+      order-service:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    networks:
+      - royal-mart-network
+    environment:
+      # Eureka
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://service-registry:8761/eureka/
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+      # Profile
+      SPRING_PROFILES_ACTIVE: docker
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 200s
+
+  # ── React Frontend ─────────────────────────────────────────
+  frontend:
+    build:
+      context: ./royal-mart
+      dockerfile: Dockerfile
+    container_name: rm-frontend
+    restart: unless-stopped
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+    ports:
+      - "3000:80"
+    networks:
+      - royal-mart-network
+
+# ════════════════════════════════════════════════════════════
+#  VOLUMES — persistent data storage
+# ════════════════════════════════════════════════════════════
+volumes:
+  mysql-user-data:
+    driver: local
+  mysql-product-data:
+    driver: local
+  mysql-order-data:
+    driver: local
+  redis-data:
+    driver: local
+  kafka-data:
+    driver: local
+  zookeeper-data:
+    driver: local
+  zookeeper-logs:
+    driver: local
+
+# ════════════════════════════════════════════════════════════
+#  NETWORK — all services communicate here
+# ════════════════════════════════════════════════════════════
+networks:
+  royal-mart-network:
+    driver: bridge
+    name: royal-mart-network

@@ -1,10 +1,10 @@
 package com.ecommerce.order_service.client;
 
 
-import com.ecommerce.product_service.model.request.ReserveStockRequest;
-import com.ecommerce.product_service.model.request.StockOperationRequest;
-import com.ecommerce.product_service.model.response.ProductAvailabilityResponse;
-import com.ecommerce.product_service.model.response.ProductPriceResponse;
+import com.ecommerce.order_service.model.request.ReserveStockRequest;
+import com.ecommerce.order_service.model.request.StockOperationRequest;
+import com.ecommerce.order_service.model.response.ProductAvailabilityResponse;
+import com.ecommerce.order_service.model.response.ProductPriceResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.*;
 
